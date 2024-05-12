@@ -218,6 +218,7 @@ class ContrastDataset(Dataset):
         model_type="encoder_decoder",
         use_decoder=False,
         device="cuda",
+        custom_made=False
     ):
         # data and tokenizer
         self.raw_dataset = raw_dataset
@@ -225,16 +226,19 @@ class ContrastDataset(Dataset):
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
         self.device = device
-
+        self.custom_made = custom_made
         # for formatting the answers
         self.model_type = model_type
         self.use_decoder = use_decoder
         if self.use_decoder:
             assert self.model_type != "encoder"
 
-        # prompt
-        prompt_name_list = list(all_prompts.name_to_id_mapping.keys())
-        self.prompt = all_prompts[prompt_name_list[prompt_idx]]
+        if self.custom_made:
+            self.prompt = all_prompts
+        else:
+            # prompt
+            prompt_name_list = list(all_prompts.name_to_id_mapping.keys())
+            self.prompt = all_prompts[prompt_name_list[prompt_idx]]
 
     def __len__(self):
         return len(self.raw_dataset)
@@ -327,24 +331,29 @@ class ContrastDataset(Dataset):
         data = self.raw_dataset[int(index)]
         text, true_answer = data["text"], data["label"]
 
-        # get the possible labels
-        # (for simplicity assume the binary case for contrast pairs)
-        label_list = self.prompt.get_answer_choices_list(data)
-        assert len(label_list) == 2, print(
-            "Make sure there are only two possible answers! Actual number of answers:",
-            label_list,
-        )
+        if self.custom_made:
+            neg_prompt = self.prompt[int(index)]['text'],'No'
+            pos_prompt = self.prompt[int(index)]['text'],'Yes'
+        
+        else:
+            # get the possible labels
+            # (for simplicity assume the binary case for contrast pairs)
+            label_list = self.prompt.get_answer_choices_list(data)
+            assert len(label_list) == 2, print(
+                "Make sure there are only two possible answers! Actual number of answers:",
+                label_list,
+            )
 
-        # reconvert to dataset format but with fake/candidate labels to create the contrast pair
-        neg_example = {"text": text, "label": 0}
-        pos_example = {"text": text, "label": 1}
+            # reconvert to dataset format but with fake/candidate labels to create the contrast pair
+            neg_example = {"text": text, "label": 0}
+            pos_example = {"text": text, "label": 1}
 
-        # construct contrast pairs by answering the prompt with the two different possible labels
-        # (for example, label 0 might be mapped to "no" and label 1 might be mapped to "yes")
-        neg_prompt, pos_prompt = self.prompt.apply(neg_example), self.prompt.apply(
-            pos_example
-        )
-
+            # construct contrast pairs by answering the prompt with the two different possible labels
+            # (for example, label 0 might be mapped to "no" and label 1 might be mapped to "yes")
+            neg_prompt, pos_prompt = self.prompt.apply(neg_example), self.prompt.apply(
+                pos_example
+            )
+        
         # tokenize
         neg_ids, pos_ids = self.encode(neg_prompt), self.encode(pos_prompt)
 
@@ -365,6 +374,65 @@ class ContrastDataset(Dataset):
         # return the tokenized inputs, the text prompts, and the true label
         return neg_ids, pos_ids, neg_prompt, pos_prompt, true_answer
 
+
+def get_custom_dataloader(
+    tokenizer,
+    prompt_idx,
+    batch_size=16,
+    num_examples=1000,
+    model_type="encoder_decoder",
+    use_decoder=False,
+    device="cuda",
+    pin_memory=True,
+    num_workers=1,
+):
+    """
+    Creates a dataloader for a given dataset (and its split), tokenizer, and prompt index
+
+    Takes a random subset of (at most) num_examples samples from the dataset that are not truncated by the tokenizer.
+    """
+    # load the raw dataset
+    from questions import DICT
+    raw_dataset = DICT
+
+    # create the ConstrastDataset
+    contrast_dataset = ContrastDataset(
+        raw_dataset,
+        tokenizer,
+        raw_dataset,
+        prompt_idx,
+        model_type=model_type,
+        use_decoder=use_decoder,
+        device=device,
+        custom_made=True,
+    )
+
+    # get a random permutation of the indices; we'll take the first num_examples of these that do not get truncated
+    random_idxs = np.random.permutation(len(contrast_dataset))
+
+    keep_idxs = []
+    for idx in random_idxs:
+        question, answer = raw_dataset[int(idx)]["text"], raw_dataset[int(idx)]["label"]
+        input_text = question + " " + ["Yes", "No"][answer]
+        if (
+            len(tokenizer.encode(input_text, truncation=False))
+            < tokenizer.model_max_length - 2
+        ):  # include small margin to be conservative
+            keep_idxs.append(idx)
+            if len(keep_idxs) >= num_examples:
+                break
+
+    # create and return the corresponding dataloader
+    subset_dataset = torch.utils.data.Subset(contrast_dataset, keep_idxs)
+    dataloader = DataLoader(
+        subset_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        pin_memory=pin_memory,
+        num_workers=num_workers,
+    )
+
+    return dataloader
 
 def get_dataloader(
     dataset_name,
