@@ -35,6 +35,7 @@ model_mapping = {
     "deberta-mnli": "microsoft/deberta-xxlarge-v2-mnli",
     "deberta": "microsoft/deberta-xxlarge-v2",
     "roberta-mnli": "roberta-large-mnli",
+    "gpt2": "gpt2"
 }
 
 
@@ -46,7 +47,7 @@ def get_parser():
     parser = argparse.ArgumentParser()
     # setting up model
     parser.add_argument(
-        "--model_name", type=str, default="T5", help="Name of the model to use"
+        "--model_name", type=str, default="gpt2", help="Name of the model to use"
     )
     parser.add_argument(
         "--cache_dir",
@@ -58,7 +59,7 @@ def get_parser():
         "--parallelize", action="store_true", help="Whether to parallelize the model"
     )
     parser.add_argument(
-        "--device", type=str, default="cuda", help="Device to use for the model"
+        "--device", type=str, default="cpu", help="Device to use for the model"
     )
     # setting up data
     parser.add_argument(
@@ -70,7 +71,7 @@ def get_parser():
     parser.add_argument("--prompt_idx", type=int, default=0, help="Which prompt to use")
     parser.add_argument("--batch_size", type=int, default=1, help="Batch size to use")
     parser.add_argument(
-        "--num_examples", type=int, default=1000, help="Number of examples to generate"
+        "--num_examples", type=int, default=10, help="Number of examples to generate"
     )
     # which hidden states we extract
     parser.add_argument(
@@ -593,7 +594,7 @@ class CCS(object):
         lr=1e-3,
         batch_size=-1,
         verbose=False,
-        device="cuda",
+        device="cpu",
         linear=True,
         weight_decay=0.01,
         var_normalize=False,
