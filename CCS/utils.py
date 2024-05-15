@@ -750,6 +750,48 @@ class CCS(object):
 
         return acc
 
+    def get_results(self, x0_test, x1_test, y_test):
+        """
+        Returns the results of the probe on the test data
+        """
+        x0 = torch.tensor(
+            self.normalize(x0_test),
+            dtype=torch.float,
+            requires_grad=False,
+            device=self.device,
+        )
+        x1 = torch.tensor(
+            self.normalize(x1_test),
+            dtype=torch.float,
+            requires_grad=False,
+            device=self.device,
+        )
+        with torch.no_grad():
+            p0, p1 = self.best_probe(x0), self.best_probe(x1)
+        avg_confidence = 0.5 * (p0 + (1 - p1))
+        predictions = (avg_confidence.detach().cpu().numpy() < 0.5).astype(int)[:, 0]
+        acc = (predictions == y_test).mean()
+        acc = max(acc, 1 - acc)
+
+        return predictions, avg_confidence
+    
+    def render_answers(self, predictions, questions, conf) -> None:
+        """
+        Renders the answers in the format required by the evaluation script
+        """
+        # confidence from tensor to numpy
+        conf = conf.detach().cpu().numpy()
+        conf = np.round(conf, 2)
+        conf = conf[:, 0]
+
+        answers = ""
+        for i, (p, q, c) in enumerate(zip(predictions, questions, conf)):
+            answers += f"{i+1}. {q} {['Yes','No'][p]} Confidence:{100*c}%\n"
+
+        
+        print(answers)
+
+
     def train(self):
         """
         Does a single training run of nepochs epochs

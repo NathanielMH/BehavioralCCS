@@ -21,9 +21,9 @@ def main(args, generation_args):
     # you can also concatenate, but this works fine and is more comparable to CCS inputs
     x_train = neg_hs_train - pos_hs_train  
     x_test = neg_hs_test - pos_hs_test
-    lr = LogisticRegression(class_weight="balanced")
-    lr.fit(x_train, y_train)
-    print("Logistic regression accuracy: {}".format(lr.score(x_test, y_test)))
+    #lr = LogisticRegression(class_weight="balanced")
+    #lr.fit(x_train, y_train)
+    #print("Logistic regression accuracy: {}".format(lr.score(x_test, y_test)))
 
     # Set up CCS. Note that you can usually just use the default args by simply doing ccs = CCS(neg_hs, pos_hs, y)
     ccs = CCS(neg_hs_train, pos_hs_train, nepochs=args.nepochs, ntries=args.ntries, lr=args.lr, batch_size=args.ccs_batch_size, 
@@ -33,6 +33,11 @@ def main(args, generation_args):
     # train and evaluate CCS
     ccs.repeated_train()
     ccs_acc = ccs.get_acc(neg_hs_test, pos_hs_test, y_test)
+
+    from questions import DICT
+    # obtain the answers to the questions
+    predictions, conf = ccs.get_results(neg_hs_test, pos_hs_test, y_test)
+    ccs.render_answers(predictions,[d['text'] for d in DICT], conf)
     print("CCS accuracy: {}".format(ccs_acc))
 
 
