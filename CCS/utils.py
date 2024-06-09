@@ -392,8 +392,8 @@ def get_custom_dataloader(
     Takes a random subset of (at most) num_examples samples from the dataset that are not truncated by the tokenizer.
     """
     # load the raw dataset
-    from questions import DICT
-    raw_dataset = DICT
+    from questions import TEST_DATA
+    raw_dataset = TEST_DATA
 
     # create the ConstrastDataset
     contrast_dataset = ContrastDataset(
@@ -407,11 +407,8 @@ def get_custom_dataloader(
         custom_made=True,
     )
 
-    # get a random permutation of the indices; we'll take the first num_examples of these that do not get truncated
-    random_idxs = np.random.permutation(len(contrast_dataset))
-
     keep_idxs = []
-    for idx in random_idxs:
+    for idx in range(len(contrast_dataset)):
         question, answer = raw_dataset[int(idx)]["text"], raw_dataset[int(idx)]["label"]
         input_text = question + " " + ["Yes", "No"][answer]
         if (
@@ -605,7 +602,6 @@ def get_all_hidden_states(
     model.eval()
     for batch in tqdm(dataloader):
         neg_ids, pos_ids, _, _, gt_label = batch
-
         neg_hs = get_individual_hidden_states(
             model,
             neg_ids,
