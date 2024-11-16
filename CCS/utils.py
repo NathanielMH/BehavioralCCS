@@ -409,7 +409,7 @@ def get_custom_dataloader(
 
     keep_idxs = []
     for idx in range(len(contrast_dataset)):
-        question, answer = raw_dataset[int(idx)]["text"], raw_dataset[int(idx)]["label"]
+        question = raw_dataset[int(idx)]["question"]
         input_text = question + " " + ["Yes", "No"][answer]
         if (
             len(tokenizer.encode(input_text, truncation=False))

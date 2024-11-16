@@ -5,20 +5,16 @@ from utils import get_parser, load_all_generations, CCS
 
 def main(args, generation_args, filename):
     # load hidden states and labels
-    neg_hs_train, pos_hs_train, y_train = load_all_generations(generation_args)
+    neg_hs, pos_hs, y = load_all_generations(generation_args)
     
-    if neg_hs_train.shape[1] == 1:  # may have an extra dimension; if so, get rid of it
-        neg_hs_train = neg_hs_train.squeeze()
-        pos_hs_train = pos_hs_train.squeeze()
+    if neg_hs.shape[1] == 1:  # may have an extra dimension; if so, get rid of it
+        neg_hs = neg_hs.squeeze()
+        pos_hs = pos_hs.squeeze()
 
-    test_args = generation_args
-    test_args.dataset_name = 'custom'
-    test_args.num_examples = 20
-    neg_hs_test, pos_hs_test, y_test = load_all_generations(test_args)
+    # split into train and test
+    neg_hs_train, pos_hs_train, y_train = pos_hs[:int(0.8*len(pos_hs))], neg_hs[:int(0.8*len(neg_hs))], y[:int(0.8*len(y))]
+    neg_hs_test, pos_hs_test, y_test = pos_hs[int(0.8*len(pos_hs)):], neg_hs[int(0.8*len(neg_hs)):], y[int(0.8*len(y)):]
 
-    if neg_hs_test.shape[1] == 1:  # may have an extra dimension; if so, get rid of it
-        neg_hs_test = neg_hs_test.squeeze()
-        pos_hs_test = pos_hs_test.squeeze()
 
     # print(len(neg_hs_test), len(pos_hs_test), len(y_test), len(neg_hs_train), len(pos_hs_train), len(y_train))
     # Set up CCS. Note that you can usually just use the default args by simply doing ccs = CCS(neg_hs, pos_hs, y)

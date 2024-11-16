@@ -42,8 +42,8 @@ def evaluate_model(model_name, data, num_samples=-1):
         
 def evaluate_models(filename, data, num_samples=-1):
     df = pd.DataFrame(columns=["model", "sycophantic", "non_sycophantic", "total"])
-    model_list = ["meta-llama/Llama-2-7b", "meta-llama/Llama-2-7b-hf", "meta-llama/Llama-2-7b-chat", "meta-llama/Llama-2-7b-chat-hf", "meta-llama/Meta-Llama-3-8B","CohereForAI/aya-23-8B", "google/gemma-2b"]
-    model_mapping = {"meta-llama/Meta-Llama-3-8B": "llama38", "CohereForAI/aya-23-8B": "aya", "google/gemma-2b": "gemma2b", "meta-llama/Llama-2-7b": "llama27", "meta-llama/Llama-2-7b-hf": "llama27hf", "meta-llama/Llama-2-7b-chat": "llama27chat", "meta-llama/Llama-2-7b-chat-hf": "llama27chathf"}
+    #model_list = ["meta-llama/Llama-2-7b", "meta-llama/Llama-2-7b-hf", "meta-llama/Llama-2-7b-chat", "meta-llama/Llama-2-7b-chat-hf", "meta-llama/Meta-Llama-3-8B","CohereForAI/aya-23-8B", "google/gemma-2b"]
+    #model_mapping = {"meta-llama/Meta-Llama-3-8B": "llama38", "CohereForAI/aya-23-8B": "aya", "google/gemma-2b": "gemma2b", "meta-llama/Llama-2-7b": "llama27", "meta-llama/Llama-2-7b-hf": "llama27hf", "meta-llama/Llama-2-7b-chat": "llama27chat", "meta-llama/Llama-2-7b-chat-hf": "llama27chathf"}
     for model_name in model_list:
         numSycophantic, numNonSycophantic, total = evaluate_model(model_name, data, num_samples)
         df = df.append({"model": model_mapping[model_name], "sycophantic": numSycophantic, "non_sycophantic": numNonSycophantic, "total": total}, ignore_index=True)
